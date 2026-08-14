@@ -1,0 +1,165 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+#canvas {
+    width: 70%;
+    background-color: white;
+    border: 2px solid #333;
+    cursor: crosshair;
+}
+
+.control-panel {
+    width: 30%;
+    background-color: #e8e8e8;
+    padding: 20px;
+    overflow-y: auto;
+    border-left: 2px solid #333;
+}
+
+.control-panel h2 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 18px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    background-color: white;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #555;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #bbb;
+    border-radius: 3px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+button:active {
+    background-color: #3d8b40;
+}
+
+.info-box {
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    border-left: 4px solid #4CAF50;
+    margin-top: 15px;
+    font-size: 13px;
+    color: #555;
+}
+
+.info-box strong {
+    color: #333;
+}
+
+.result-box {
+    background-color: #e8f5e9;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #4CAF50;
+    margin-top: 15px;
+    font-size: 13px;
+    color: #2e7d32;
+    display: none;
+}
+
+.result-box.show {
+    display: block;
+}
+
+.legend {
+    background-color: white;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    margin-top: 15px;
+    font-size: 12px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.legend-color {
+    width: 15px;
+    height: 15px;
+    margin-right: 10px;
+    border-radius: 50%;
+}
+
+.vertex {
+    background-color: #808080;
+}
+
+.start-vertex {
+    background-color: #4CAF50;
+}
+
+.end-vertex {
+    background-color: #f44336;
+}
+
+.explored {
+    background-color: #2196F3;
+}
+
+.path {
+    background-color: #FFD700;
+}

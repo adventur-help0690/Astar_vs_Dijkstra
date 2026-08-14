@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A* vs Dijkstra Pathfinding</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <canvas id="canvas"></canvas>
+        <div class="control-panel">
+            <h2>Pathfinding Visualizer</h2>
+
+            <div class="form-group">
+                <label for="numVertices">Number of Vertices:</label>
+                <input type="number" id="numVertices" min="2" max="100" value="10">
+                <small>Selected: <span id="vertexCount">10</span></small>
+            </div>
+
+            <div class="form-group">
+                <label for="maxEdges">Max Edges (-1 for all):</label>
+                <input type="number" id="maxEdges" min="-1" value="20">
+                <small>Selected: <span id="edgeCount">20</span></small>
+            </div>
+
+            <div class="form-group">
+                <label for="minDistance">Min Vertex Distance:</label>
+                <input type="number" id="minDistance" min="10" max="200" value="30">
+            </div>
+
+            <button id="generateBtn">Generate Graph</button>
+
+            <div class="info-box">
+                <strong>Instructions:</strong><br>
+                LMB = Set Start<br>
+                RMB = Set End<br>
+                Hover = See Distance
+            </div>
+
+            <div class="form-group">
+                <label for="algorithm">Algorithm:</label>
+                <select id="algorithm">
+                    <option value="astar">A* Search</option>
+                    <option value="dijkstra">Dijkstra</option>
+                </select>
+            </div>
+
+            <button id="runBtn">Run Algorithm</button>
+            <button id="clearBtn">Clear Path</button>
+
+            <div id="resultBox" class="result-box"></div>
+
+            <div class="legend">
+                <strong>Legend:</strong>
+                <div class="legend-item">
+                    <div class="legend-color vertex"></div>
+                    <span>Vertex</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color start-vertex"></div>
+                    <span>Start (LMB)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color end-vertex"></div>
+                    <span>End (RMB)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color explored"></div>
+                    <span>Explored</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color path"></div>
+                    <span>Final Path</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="astar.js"></script>
+    <script src="dij.js"></script>
+    <script src="script1.js"></script>
+</body>
+
+</html>

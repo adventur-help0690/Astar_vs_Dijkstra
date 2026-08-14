@@ -33,13 +33,13 @@ function heuristic(a, b) {
     return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }
 
-function aStar(graph, vertices, start, end) {
+function aStarSteps(graph, vertices, start, end) {
     const openSet = new PriorityQueue();
     const cameFrom = new Map();
     const gScore = new Map();
     const fScore = new Map();
     const visited = new Set();
-    const explored = [];
+    const steps = [];
 
     const startStr = start.toString();
     const endStr = end.toString();
@@ -54,7 +54,8 @@ function aStar(graph, vertices, start, end) {
 
         if (visited.has(currentStr)) continue;
         visited.add(currentStr);
-        explored.push(current);
+
+        steps.push({ explored: Array.from(visited), current });
 
         if (current === end) {
             const path = [];
@@ -74,7 +75,7 @@ function aStar(graph, vertices, start, end) {
                 if (edge) distance += edge[2];
             }
 
-            return { path, explored, distance: distance.toFixed(2) };
+            return { path, steps, distance: distance.toFixed(2) };
         }
 
         const neighbors = graph
@@ -97,5 +98,10 @@ function aStar(graph, vertices, start, end) {
         }
     }
 
-    return { path: [], explored, distance: 'No path found' };
+    return { path: [], steps, distance: 'No path found' };
+}
+
+function aStar(graph, vertices, start, end) {
+    const result = aStarSteps(graph, vertices, start, end);
+    return { path: result.path, explored: result.steps[result.steps.length - 1]?.explored || [], distance: result.distance };
 }

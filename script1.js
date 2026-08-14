@@ -8,6 +8,23 @@ let endVertex = null;
 let lastPath = [];
 let lastExplored = [];
 let hoveredEdge = null;
+let hoveredVertex = null;
+
+// Animation variables
+let animationSteps = [];
+let animationIndex = 0;
+let isAnimating = false;
+let animationSpeed = 100; // milliseconds per step
+let animationInterval = null;
+
+// Transform variables (zoom & pan)
+let zoom = 1;
+let panX = 0;
+let panY = 0;
+let isDragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let draggedVertex = null;
 
 const VERTEX_RADIUS = 8;
 const MIN_VERTEX_DISTANCE = 30;
@@ -56,6 +73,8 @@ function generateVertices(n) {
     lastPath = [];
     lastExplored = [];
     hoveredEdge = null;
+    hoveredVertex = null;
+    stopAnimation();
 
     redraw();
 }
@@ -131,12 +150,33 @@ function generateEdges(maxEdges, minDistance) {
     lastPath = [];
     lastExplored = [];
     hoveredEdge = null;
+    hoveredVertex = null;
+    stopAnimation();
 
     redraw();
 }
 
+function worldToCanvas(x, y) {
+    return {
+        x: (x - panX) * zoom + canvas.width / 2,
+        y: (y - panY) * zoom + canvas.height / 2
+    };
+}
+
+function canvasToWorld(x, y) {
+    return {
+        x: (x - canvas.width / 2) / zoom + panX,
+        y: (y - canvas.height / 2) / zoom + panY
+    };
+}
+
 function redraw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-panX, -panY);
 
     // Draw edges
     edges.forEach((edge, idx) => {
@@ -146,17 +186,33 @@ function redraw() {
         const x2 = vertices[v2][0];
         const y2 = vertices[v2][1];
 
-        if (lastPath.some((v, i) => i < lastPath.length - 1 &&
+        // Check if this edge is part of the final path
+        const isInPath = lastPath.some((v, i) => i < lastPath.length - 1 &&
             ((lastPath[i] === v1 && lastPath[i + 1] === v2) ||
-                (lastPath[i] === v2 && lastPath[i + 1] === v1)))) {
+                (lastPath[i] === v2 && lastPath[i + 1] === v1)));
+
+        // Check if both vertices are explored
+        const isExplored = lastExplored.includes(v1) && lastExplored.includes(v2);
+
+        // Check if connected to hovered vertex
+        const connectedToHovered = hoveredVertex !== null &&
+            (v1 === hoveredVertex || v2 === hoveredVertex);
+
+        if (isInPath) {
             ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 4;
-        } else if (lastExplored.includes(v1) && lastExplored.includes(v2)) {
+            ctx.lineWidth = 4 / zoom;
+        } else if (isExplored) {
             ctx.strokeStyle = '#2196F3';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2 / zoom;
+        } else if (connectedToHovered) {
+            ctx.strokeStyle = '#FF6B6B';
+            ctx.lineWidth = 2 / zoom;
+        } else if (hoveredEdge === idx) {
+            ctx.strokeStyle = '#FF6B6B';
+            ctx.lineWidth = 3 / zoom;
         } else {
-            ctx.strokeStyle = hoveredEdge === idx ? '#FF6B6B' : '#999';
-            ctx.lineWidth = hoveredEdge === idx ? 3 : 1;
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 1 / zoom;
         }
 
         ctx.beginPath();
@@ -169,6 +225,7 @@ function redraw() {
     vertices.forEach((vertex, idx) => {
         const x = vertex[0];
         const y = vertex[1];
+        const r = VERTEX_RADIUS / zoom;
 
         if (idx === startVertex) {
             ctx.fillStyle = '#4CAF50';
@@ -180,20 +237,27 @@ function redraw() {
             ctx.fillStyle = '#808080';
         }
 
+        if (idx === hoveredVertex) {
+            ctx.fillStyle = '#FF9800';
+        }
+
         ctx.beginPath();
-        ctx.arc(x, y, VERTEX_RADIUS, 0, 2 * Math.PI);
+        ctx.arc(x, y, r, 0, 2 * Math.PI);
         ctx.fill();
 
         ctx.strokeStyle = '#000';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 / zoom;
         ctx.stroke();
     });
+
+    ctx.restore();
 }
 
 function getVertexAt(x, y) {
+    const world = canvasToWorld(x, y);
     for (let i = 0; i < vertices.length; i++) {
-        const dist = Math.hypot(x - vertices[i][0], y - vertices[i][1]);
-        if (dist <= VERTEX_RADIUS + 5) {
+        const dist = Math.hypot(world.x - vertices[i][0], world.y - vertices[i][1]);
+        if (dist <= VERTEX_RADIUS / zoom + 5 / zoom) {
             return i;
         }
     }
@@ -201,7 +265,8 @@ function getVertexAt(x, y) {
 }
 
 function getEdgeAt(x, y) {
-    const threshold = 10;
+    const threshold = 10 / zoom;
+    const world = canvasToWorld(x, y);
     for (let i = 0; i < edges.length; i++) {
         const [v1, v2] = edges[i];
         const x1 = vertices[v1][0];
@@ -209,7 +274,7 @@ function getEdgeAt(x, y) {
         const x2 = vertices[v2][0];
         const y2 = vertices[v2][1];
 
-        const dist = pointToSegmentDistance(x, y, x1, y1, x2, y2);
+        const dist = pointToSegmentDistance(world.x, world.y, x1, y1, x2, y2);
         if (dist < threshold) {
             return i;
         }
@@ -245,10 +310,97 @@ function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
     return Math.hypot(px - xx, py - yy);
 }
 
+function stopAnimation() {
+    if (animationInterval) {
+        clearInterval(animationInterval);
+        animationInterval = null;
+    }
+    isAnimating = false;
+    animationIndex = 0;
+}
+
+function updatePlayPauseButton() {
+    const btn = document.getElementById('playPauseBtn');
+    if (isAnimating) {
+        btn.textContent = 'Pause';
+    } else {
+        btn.textContent = 'Play';
+    }
+}
+
+function stepAnimation() {
+    if (animationIndex < animationSteps.length) {
+        lastExplored = animationSteps[animationIndex].explored;
+        animationIndex++;
+        redraw();
+    }
+}
+
+function playAnimation() {
+    if (animationIndex >= animationSteps.length) {
+        animationIndex = 0;
+    }
+
+    isAnimating = true;
+    updatePlayPauseButton();
+
+    animationInterval = setInterval(() => {
+        if (animationIndex >= animationSteps.length) {
+            stopAnimation();
+            updatePlayPauseButton();
+            return;
+        }
+
+        lastExplored = animationSteps[animationIndex].explored;
+        animationIndex++;
+        redraw();
+    }, animationSpeed);
+}
+
+function togglePlayPause() {
+    if (animationSteps.length === 0) return;
+
+    if (isAnimating) {
+        stopAnimation();
+    } else {
+        playAnimation();
+    }
+    updatePlayPauseButton();
+}
+
 canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    if (isDragging && draggedVertex !== null) {
+        const world = canvasToWorld(x, y);
+        vertices[draggedVertex] = [world.x, world.y];
+        redraw();
+        return;
+    }
+
+    if (isDragging) {
+        panX -= (x - dragStartX) / zoom;
+        panY -= (y - dragStartY) / zoom;
+        dragStartX = x;
+        dragStartY = y;
+        redraw();
+        return;
+    }
+
+    const vertexIdx = getVertexAt(x, y);
+    if (vertexIdx !== null) {
+        if (hoveredVertex !== vertexIdx) {
+            hoveredVertex = vertexIdx;
+            redraw();
+        }
+    } else {
+        if (hoveredVertex !== null) {
+            hoveredVertex = null;
+            redraw();
+        }
+    }
 
     const edgeIdx = getEdgeAt(x, y);
     if (edgeIdx !== null && hoveredEdge !== edgeIdx) {
@@ -268,14 +420,17 @@ canvas.addEventListener('mousemove', (e) => {
 });
 
 canvas.addEventListener('mousedown', (e) => {
-    if (lastPath.length > 0) return; // Disable selection during display
-
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    dragStartX = x;
+    dragStartY = y;
+    isDragging = true;
+
     const vertex = getVertexAt(x, y);
-    if (vertex !== null) {
+    if (vertex !== null && lastPath.length === 0) {
+        draggedVertex = vertex;
         if (e.button === 0) { // LMB
             startVertex = vertex;
         } else if (e.button === 2) { // RMB
@@ -283,6 +438,36 @@ canvas.addEventListener('mousedown', (e) => {
         }
         redraw();
     }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+    isDragging = false;
+    draggedVertex = null;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const world = canvasToWorld(x, y);
+
+    const zoomFactor = 1.1;
+    if (e.deltaY < 0) {
+        zoom *= zoomFactor;
+    } else {
+        zoom /= zoomFactor;
+    }
+
+    zoom = Math.max(0.5, Math.min(3, zoom));
+
+    const worldAfter = canvasToWorld(x, y);
+    panX += world.x - worldAfter.x;
+    panY += world.y - worldAfter.y;
+
+    redraw();
 });
 
 canvas.addEventListener('contextmenu', (e) => {
@@ -308,6 +493,10 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     const maxEdges = parseInt(document.getElementById('maxEdges').value);
     const minDistance = parseInt(document.getElementById('minDistance').value);
     generateEdges(maxEdges, minDistance);
+
+    zoom = 1;
+    panX = 0;
+    panY = 0;
 });
 
 document.getElementById('runBtn').addEventListener('click', () => {
@@ -321,17 +510,21 @@ document.getElementById('runBtn').addEventListener('click', () => {
         return;
     }
 
+    stopAnimation();
+
     const algorithm = document.getElementById('algorithm').value;
     let result;
 
     if (algorithm === 'astar') {
-        result = aStar(edges, vertices, startVertex, endVertex);
+        result = aStarSteps(edges, vertices, startVertex, endVertex);
     } else {
-        result = dijkstra(edges, vertices, startVertex, endVertex);
+        result = dijkstraSteps(edges, vertices, startVertex, endVertex);
     }
 
+    animationSteps = result.steps;
     lastPath = result.path;
-    lastExplored = result.explored;
+    animationIndex = 0;
+    lastExplored = [];
 
     const resultBox = document.getElementById('resultBox');
     if (result.path.length > 0) {
@@ -345,7 +538,16 @@ document.getElementById('runBtn').addEventListener('click', () => {
     }
     resultBox.classList.add('show');
 
+    updatePlayPauseButton();
     redraw();
+});
+
+document.getElementById('stepBtn').addEventListener('click', () => {
+    stepAnimation();
+});
+
+document.getElementById('playPauseBtn').addEventListener('click', () => {
+    togglePlayPause();
 });
 
 document.getElementById('clearBtn').addEventListener('click', () => {
@@ -353,6 +555,13 @@ document.getElementById('clearBtn').addEventListener('click', () => {
     lastExplored = [];
     startVertex = null;
     endVertex = null;
+    stopAnimation();
     document.getElementById('resultBox').classList.remove('show');
+    updatePlayPauseButton();
     redraw();
+});
+
+document.getElementById('speedSlider').addEventListener('change', (e) => {
+    animationSpeed = 300 - parseInt(e.target.value);
+    document.getElementById('speedValue').textContent = e.target.value;
 });

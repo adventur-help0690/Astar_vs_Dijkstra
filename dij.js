@@ -1,7 +1,8 @@
-function dijkstra(graph, vertices, start, end) {
+function dijkstraSteps(graph, vertices, start, end) {
     const distances = new Map();
     const previous = new Map();
     const unvisited = new Set();
+    const steps = [];
     const explored = [];
 
     for (let i = 0; i < vertices.length; i++) {
@@ -25,6 +26,10 @@ function dijkstra(graph, vertices, start, end) {
             break;
         }
 
+        unvisited.delete(current);
+        explored.push(current);
+        steps.push({ explored: [...explored], current });
+
         if (current === end) {
             const path = [];
             let cur = end;
@@ -34,11 +39,8 @@ function dijkstra(graph, vertices, start, end) {
             }
             path.unshift(start);
 
-            return { path, explored, distance: distances.get(end).toFixed(2) };
+            return { path, steps, distance: distances.get(end).toFixed(2) };
         }
-
-        unvisited.delete(current);
-        explored.push(current);
 
         const neighbors = graph
             .filter(e => e[0] === current || e[1] === current)
@@ -55,5 +57,10 @@ function dijkstra(graph, vertices, start, end) {
         }
     }
 
-    return { path: [], explored, distance: 'No path found' };
+    return { path: [], steps, distance: 'No path found' };
+}
+
+function dijkstra(graph, vertices, start, end) {
+    const result = dijkstraSteps(graph, vertices, start, end);
+    return { path: result.path, explored: result.steps[result.steps.length - 1]?.explored || [], distance: result.distance };
 }
